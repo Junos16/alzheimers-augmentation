@@ -1,0 +1,81 @@
+```mermaid
+flowchart LR
+    %% Input Components
+    subgraph Input["Real Data & Conditions"]
+        RE[Real Embeddings<br/>256-dim]
+        CV[Condition Vector<br/>Age + Gender + MMSE<br/>18-dim]
+        NZ[Random Noise<br/>Latent Space<br/>64-dim]
+    end
+
+    %% Generator Architecture
+    subgraph Generator["Generator Network"]
+        G1[Concat Layer<br/>64 + 18 = 82-dim]
+        G2[Linear + BatchNorm<br/>82 → 128-dim<br/>ReLU + Dropout]
+        G3[Linear + BatchNorm<br/>128 → 256-dim<br/>ReLU + Dropout]
+        G4[Linear + BatchNorm<br/>256 → 512-dim<br/>ReLU]
+        G5[Output Layer<br/>512 → 256-dim<br/>Tanh Activation]
+    end
+
+    %% Discriminator Architecture
+    subgraph Discriminator["Discriminator Network"]
+        D1[Concat Layer<br/>256 + 18 = 274-dim]
+        D2[Linear Layer<br/>274 → 512-dim<br/>LeakyReLU + Dropout]
+        D3[Linear Layer<br/>512 → 256-dim<br/>LeakyReLU + Dropout]
+        D4[Linear Layer<br/>256 → 128-dim<br/>LeakyReLU + Dropout]
+        D5[Output Layer<br/>128 → 1-dim<br/>Sigmoid]
+    end
+
+    %% Training Process
+    subgraph Training["Adversarial Training"]
+        GL[Generator Loss<br/>BCE(D(G(z,c)), 1)]
+        DL[Discriminator Loss<br/>BCE(D(real,c), 1) +<br/>BCE(D(G(z,c)), 0)]
+        OG[Adam Optimizer<br/>Generator<br/>lr=3e-4]
+        OD[Adam Optimizer<br/>Discriminator<br/>lr=3e-4]
+    end
+
+    %% Output
+    subgraph Output["Generated Data"]
+        SY[Synthetic Embeddings<br/>256-dim]
+        AU[Augmented Dataset<br/>Real + Synthetic]
+    end
+
+    %% Generator Flow
+    NZ --> G1
+    CV --> G1
+    G1 --> G2 --> G3 --> G4 --> G5
+    G5 --> SY
+
+    %% Discriminator Flow - Real Path
+    RE --> D1
+    CV --> D1
+
+    %% Discriminator Flow - Fake Path
+    SY --> D1
+
+    D1 --> D2 --> D3 --> D4 --> D5
+
+    %% Training Flow
+    D5 --> DL
+    D5 --> GL
+    DL --> OD
+    GL --> OG
+    OG -.-> G2
+    OD -.-> D2
+
+    %% Output Flow
+    RE --> AU
+    SY --> AU
+
+    %% Styling
+    classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef generator fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef discriminator fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef training fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef output fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+
+    class NZ,CV,RE input
+    class G1,G2,G3,G4,G5 generator
+    class D1,D2,D3,D4,D5 discriminator
+    class GL,DL,OG,OD training
+    class SY,AU output
+```
